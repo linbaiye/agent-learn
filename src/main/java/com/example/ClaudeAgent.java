@@ -4,11 +4,14 @@ import com.anthropic.client.AnthropicClient;
 import com.anthropic.client.okhttp.AnthropicOkHttpClient;
 import com.anthropic.models.messages.Message;
 import com.anthropic.models.messages.MessageCreateParams;
+import com.anthropic.models.messages.MessageParam;
 import com.anthropic.models.messages.Model;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ClaudeAgent {
 
@@ -17,6 +20,8 @@ public class ClaudeAgent {
     public static void main(String[] args) throws IOException {
         // Reads ANTHROPIC_API_KEY from the environment
         AnthropicClient client = AnthropicOkHttpClient.fromEnv();
+
+        List<MessageParam> history = new ArrayList<>();
 
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(System.in))) {
             String line;
@@ -29,13 +34,19 @@ public class ClaudeAgent {
                     continue;
                 }
 
+                history.add(MessageParam.builder()
+                        .role(MessageParam.Role.USER)
+                        .content(question)
+                        .build());
+
                 MessageCreateParams params = MessageCreateParams.builder()
                         .model(Model.CLAUDE_HAIKU_4_5)
                         .maxTokens(1024L)
-                        .addUserMessage(question)
+                        .messages(history)
                         .build();
 
                 Message response = client.messages().create(params);
+                history.add(response.toParam());
 
                 response.content().stream()
                         .flatMap(block -> block.text().stream())
